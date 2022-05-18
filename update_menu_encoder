@@ -1,8 +1,7 @@
 /* =============== ПОДКЛЮЧАЕМ НЕОБХОДИМЫЕ БИБЛИОТЕКИ =============== */ 
 
+#include <EncButton.h>
 #include <LiquidCrystal_I2C.h>
-#include <Key.h>
-#include <Keypad.h>
 #include<GyverEncoder.h>
 
 /* =============== ПОДКЛЮЧАЕМ НЕОБХОДИМЫЕ БИБЛИОТЕКИ =============== */ 
@@ -15,7 +14,7 @@
 #define DT 3
 #define SW 4
 
-Encoder enc1(CLK, DT, SW);
+EncButton<EB_TICK, 2, 3, 4> enc1;
 
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Инициализация дисплея 16*2
 
@@ -41,19 +40,14 @@ uint8_t num = 0; //номер выбранного элемента
 
 void encISR()
 {
-  enc1.tick();
-}
-void isrDT() 
-{
-  enc1.tick();  // отработка в прерывании
+  enc1.tickISR();
 }
 
 /* =============== ИНИЦИАЛИЗИРУЕМ НАСТРОЙКИ =============== */ 
 
 void setup() {
-  enc1.setType(TYPE2); //энкодер двухшаговый
   attachInterrupt(0, encISR, CHANGE);
-  attachInterrupt(1, isrDT, CHANGE);
+  attachInterrupt(1, encISR, CHANGE);
   
   lcd.init();
   lcd.backlight();
@@ -141,22 +135,24 @@ void loop() {
 void CheckEncoder()
 {
   enc1.tick();
-  if(enc1.isPress() && !inMenu){
+  if(enc1.press() && !inMenu){
     inMenu = true;
     num_str = unique_elem_menu;
     startt = num_str;
     lcd.clear();
+    Print(num, startt);
   }
   switch(inMenu)
   {
     case true:
 
-      if(enc1.isRight())
+      if(enc1.right())
       {
         if (num >= 1) {
           if (menu[startt + 1].parent != menu[startt + 2].parent) { //проверяем последние ли это элементы для вывода на дисплей
             num = 0;                                       //если начальная позиция + кол-во элементов за минусом один, т.к экран на две строки и при переходе мы
             startt = num_str;                               //прибавляем к позициям число 2 и все это сравниваем со след позицией, т.е последней в этом списке
+            Print(num, startt);
             break;
           }
           if(menu[startt + 1].parent == menu[startt+2].parent)
@@ -171,7 +167,8 @@ void CheckEncoder()
         {
           num++;
         }
-      } else if(enc1.isLeft())
+        Print(num, startt);
+      } else if(enc1.left())
       {
         if (num <= 0) {
           if (num_str == startt && menu[menu[num_str].parent].count % 2 == 0) {
@@ -190,16 +187,19 @@ void CheckEncoder()
         {
           num--;
         }
-      } else if(enc1.isPress())
+        Print(num, startt);
+      } else if(enc1.click())
       {
         unique_elem_menu = menu[startt+num].unique;
         DefaultDataMenu();
-      } else if(enc1.isLeftH())
+        Print(num, startt);
+      } else if(enc1.leftH())
       {
         unique_elem_menu = menu[num_str].parent;
         DefaultDataMenu();
+        Print(num, startt);
       }
-      Print(num, startt);
+      
       break;
     case false:
       ShowDataDisplay();
