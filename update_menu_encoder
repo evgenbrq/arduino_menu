@@ -3,7 +3,6 @@
 #include <LiquidCrystal_I2C.h>
 #include <Key.h>
 #include <Keypad.h>
-//#include <LiquidCrystal.h> 
 #include<GyverEncoder.h>
 
 /* =============== ПОДКЛЮЧАЕМ НЕОБХОДИМЫЕ БИБЛИОТЕКИ =============== */ 
@@ -12,30 +11,13 @@
 
 /* =============== ИНИЦИАЛИЗИРУЕМ НАСТРОЙКИ =============== */ 
 
-#define CLK 19
-#define DT 20
-#define SW 0
+#define CLK 2
+#define DT 3
+#define SW 4
 
 Encoder enc1(CLK, DT, SW);
 
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Инициализация дисплея 16*2
-//const int rs = 1, en = 2, d4 = 3, d5 = 4, d6 = 5, d7 = 6;
-//LiquidCrystal lcd(rs, en, d4, d5, d6, d7); //инициализация LCD дисплея
-#define ROWS 4
-#define COLS 3
-
-/*char keys[ROWS][COLS] =
-{
-  {'3', '2', '1'},
-  {'6', '5', '4'},
-  {'9', '8', '7'},
-  {'#', '0', '*'}
-}; //Массив символов клавиатуры */
-
-//byte rowPins[ROWS] = {7, 8, 9, 10}; // Пины для строк
-//byte colPins[COLS] = {13, 12, 11}; // Пины для стобцов
-//Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS); // Инициализация Клавиатуры
-//char key = keypad.getKey();
 
 struct ListMenu
 {
@@ -47,14 +29,12 @@ struct ListMenu
 
 ListMenu menu[13]; //Инициализация массива структур для меню
 
-uint8_t unique_elem_menu; //сохраняем уникальный номер меню, который выбран
-
 // =============== Работа с меню  =============== //
 
 bool inMenu = false; 
-uint8_t activeUniqueNumMenu = 0;
-uint8_t num_str = 0;//мы разбиваем кол-во элементов в подменю по 2 символа, это номер парных элементов
-uint8_t start; //уникальный номер элемента с которого начинается уровень меню
+uint8_t unique_elem_menu = 1; //уникальный номер меню, который выбран
+uint8_t num_str; //сохраняем уникальный номер для каждого подменю, который выбран
+uint8_t startt; //уникальный номер элемента с которого начинается уровень меню
 uint8_t num = 0; //номер выбранного элемента
 
 // =============== Работа с меню  =============== //
@@ -63,12 +43,17 @@ void encISR()
 {
   enc1.tick();
 }
+void isrDT() 
+{
+  enc1.tick();  // отработка в прерывании
+}
 
 /* =============== ИНИЦИАЛИЗИРУЕМ НАСТРОЙКИ =============== */ 
 
 void setup() {
-
+  enc1.setType(TYPE2); //энкодер двухшаговый
   attachInterrupt(0, encISR, CHANGE);
+  attachInterrupt(1, isrDT, CHANGE);
   
   lcd.init();
   lcd.backlight();
@@ -155,52 +140,71 @@ void loop() {
 
 void CheckEncoder()
 {
-  if((enc1.isPress() && !inMenu))
-  {
+  enc1.tick();
+  if(enc1.isPress() && !inMenu){
     inMenu = true;
-    unique_elem_menu = 0;
-  } else if (inMenu && enc1.isPress()) 
-  {
-    
-  } else if (inMenu && enc1.isRight())
-  {
-    if ((num >= 1 && num_str + count - 1 == menu[start + 1].unique) || (num == 0 && menu[start].parent != menu[start + 1].parent))
-    {                                                   //проверяем последние ли это элементы для вывода на дисплей
-      num = 0;                                          //если начальная позиция + кол-во элементов за минусом один, т.к экран на две строки и при переходе мы
-      start = num_str;                                  //прибавляем к позициям число 2 и все это сравниваем со след позицией, т.е последней в этом списке           
-    } else if (num == 0)
-    {
-      num++;
-    } else
-    {
-      num = 0;
-      start += 2;
-    }
-  } else if (inMenu && enc1.isLeft())
-  {
-    if (num_str == start && menu[parent].count % 2 == 0) {
-      num = 1;
-      start = start + menu[parent].count - 2;
-    } else if (num_str == start && menu[parent].count % 2 == 1) 
-    {
-      num = 0;
-      start = start + menu[parent].count - 1;
-    } else 
-    {
-      num = 1;
-      start -= 2;
-    }
-  } else if(inMenu && enc1.isPress())
-  {
-    unique_elem_menu = start;
-  } else if(!inMenu)
-  {
-    ShowDataDisplay();
-  } else if(inMenu)
-  {
-    PrintMenu(unique_elem_menu);
+    num_str = unique_elem_menu;
+    startt = num_str;
+    lcd.clear();
   }
-  
+  switch(inMenu)
+  {
+    case true:
+
+      if(enc1.isRight())
+      {
+        if (num >= 1) {
+          if (menu[startt + 1].parent != menu[startt + 2].parent) { //проверяем последние ли это элементы для вывода на дисплей
+            num = 0;                                       //если начальная позиция + кол-во элементов за минусом один, т.к экран на две строки и при переходе мы
+            startt = num_str;                               //прибавляем к позициям число 2 и все это сравниваем со след позицией, т.е последней в этом списке
+            break;
+          }
+          if(menu[startt + 1].parent == menu[startt+2].parent)
+          num = 0;
+          startt += 2;
+        }
+        else if (num == 0 && menu[unique_elem_menu+startt+1].parent != menu[unique_elem_menu+startt + 2].parent)
+        {
+          num = 0;
+          startt = num_str;
+        } else
+        {
+          num++;
+        }
+      } else if(enc1.isLeft())
+      {
+        if (num <= 0) {
+          if (num_str == startt && menu[menu[num_str].parent].count % 2 == 0) {
+            num = 1;
+            startt = startt + menu[menu[num_str].parent].count - 2;
+          } else if (num_str == startt && menu[menu[num_str].parent].count % 2 == 1) 
+          {
+            num = 0;
+            startt = startt + menu[menu[num_str].parent].count - 1;
+          } else 
+          {
+            num = 1;
+            startt -= 2;
+          }
+        } else 
+        {
+          num--;
+        }
+      } else if(enc1.isPress())
+      {
+        unique_elem_menu = menu[startt+num].unique;
+        DefaultDataMenu();
+      } else if(enc1.isLeftH())
+      {
+        unique_elem_menu = menu[num_str].parent;
+        DefaultDataMenu();
+      }
+      Print(num, startt);
+      break;
+    case false:
+      ShowDataDisplay();
+      break;
+  }
 }
 
 void ShowDataDisplay()
@@ -210,34 +214,14 @@ void ShowDataDisplay()
   lcd.print("Tmp:");    // Вывести текст
   lcd.setCursor(5, 0);
   lcd.print("15");
+  lcd.setCursor(8, 0);
 }
 
 void DefaultDataMenu()
 {
-  num_str = 0;
+  num_str = unique_elem_menu;
+  startt = unique_elem_menu;
   num = 0;
-  start = 0;
-}
-
-void PrintMenu(int unique) // Отсюда начинаем правки!!!
-{
-  for (int i = 0; i < 13; i++) {
-    if (menu[i].parent == unique) {
-      start = menu[i].unique;
-      num_str = menu[i].unique;
-      break;
-    }
-  }
-
-    if (start >= num_str + count)
-    {
-      num = 0;
-      start = num_str;
-    }
-    if (num_str > start)
-    {
-      start = num_str;
-    }
 }
 
 void Print(int num, int s) {
