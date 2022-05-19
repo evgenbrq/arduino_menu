@@ -207,7 +207,7 @@ void CheckEncoder()
   }
 }
 
-void SearchUniqueElem(uint8_t i)
+void SearchUniqueElem()
 {
   for (int i = 0; i < 13; i++) {
     if (menu[i].parent == unique_elem_menu) {
