@@ -10,6 +10,9 @@
 
 /* =============== ИНИЦИАЛИЗИРУЕМ НАСТРОЙКИ =============== */ 
 
+#define PUMP_COUNT 2
+#define START_PIN 5
+
 #define CLK 2
 #define DT 3
 #define SW 4
@@ -27,6 +30,13 @@ struct ListMenu
 };
 
 ListMenu menu[13]; //Инициализация массива структур для меню
+
+// =============== Настройки для помп  =============== //
+
+ byte pump_pins[PUMP_COUNT];
+ 
+
+// =============== Настройки для помп  =============== //
 
 // =============== Работа с меню  =============== //
 
@@ -71,7 +81,7 @@ void setup() {
   menu[3].parent = 0;
   menu[3].count = 2;
   menu[3].unique = 3;
-  strcpy(menu[3].name, "Programm");
+  strcpy(menu[3].name, "Pump");
 
   menu[4].parent = 0;
   menu[4].count = 3;
@@ -96,12 +106,12 @@ void setup() {
   menu[8].parent = 3;
   menu[8].count = 0;
   menu[8].unique = 8;
-  strcpy(menu[8].name, "Pr1");
+  strcpy(menu[8].name, "Pump 1");
 
   menu[9].parent = 3;
   menu[9].count = 0;
   menu[9].unique = 9;
-  strcpy(menu[9].name, "Pr2");
+  strcpy(menu[9].name, "Pump 2");
 
   menu[10].parent = 4;
   menu[10].count = 0;
