@@ -190,7 +190,7 @@ void CheckEncoder()
         Print(num, startt);
       } else if(enc1.click())
       {
-        unique_elem_menu = menu[startt+num].unique;
+        SearchUniqueElem();
         DefaultDataMenu();
         Print(num, startt);
       } else if(enc1.leftH())
@@ -204,6 +204,16 @@ void CheckEncoder()
     case false:
       ShowDataDisplay();
       break;
+  }
+}
+
+void SearchUniqueElem(uint8_t i)
+{
+  for (int i = 0; i < 13; i++) {
+    if (menu[i].parent == unique_elem_menu) {
+      unique_elem_menu = menu[i].unique;
+      break;
+    }
   }
 }
 
