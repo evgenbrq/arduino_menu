@@ -1,0 +1,63 @@
+#include<iostream>
+#include<ctime>
+#define COUNT_ELEM 2 //кол-во датчиков, установленных в разных краях 
+#define COUNT_OPROS 6 //кол-во опросов в минуту для обновления данных
+#define TAB '\t'
+#define NEW_LINE '\n';
+
+using namespace std;
+
+int** CreateArr();
+void AddDataToArray(int** arr);
+void ShowArray(int** arr);
+
+int main(int argc, char* argv[])
+{
+	setlocale(LC_ALL, "Rus");
+	srand(time(NULL));
+
+	int** a;
+
+	a = CreateArr();
+	AddDataToArray(a);
+	while (true)
+	{
+		int time_1 = time(NULL);
+		cout << time_1 << endl;
+	}
+}
+
+int** CreateArr()
+{
+	int** arr = new int* [COUNT_ELEM];
+	for (int i = 0; i < COUNT_OPROS; i++)
+	{
+		arr[i] = new int[COUNT_OPROS];
+	}
+	return arr;
+}
+
+void AddDataToArray(int** arr)
+{
+	for (int i = 0; i < COUNT_ELEM; i++)
+	{
+		for (int j = 0; j < COUNT_OPROS; j++)
+		{
+
+		}
+	}
+}
+
+void ShowArray(int** arr)
+{
+	cout << "Array:" << endl;
+	for (int i = 0; i < COUNT_ELEM; i++)
+	{
+		for (int j = 0; j < COUNT_OPROS; j++)
+		{
+			cout << arr[i][j] << TAB;
+		}
+		cout << NEW_LINE;
+	}
+	cout << NEW_LINE;
+}
