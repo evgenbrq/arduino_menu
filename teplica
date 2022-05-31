@@ -7,9 +7,17 @@
 /* =============== ПОДКЛЮЧАЕМ НЕОБХОДИМЫЕ БИБЛИОТЕКИ =============== */ 
 
 
-
 /* =============== ИНИЦИАЛИЗИРУЕМ НАСТРОЙКИ =============== */ 
 
+
+#define PUPM_AMOUNT 2       // количество помп, подключенных через реле
+#define START_PIN 5         // подключены начиная с пина
+#define SWITCH_LEVEL 0      // реле: 1 - высокого уровня (или мосфет), 0 - низкого
+//#define PARALLEL 0          // 1 - параллельный полив, 0 - полив в порядке очереди
+#define TIMER_START 1       // 1 - отсчёт периода с момента ВЫКЛЮЧЕНИЯ помпы, 0 - с момента ВКЛЮЧЕНИЯ помпы
+#define PIN_NASOS 7         // Пин с подключенным насосом
+
+//Пины энкодера
 #define CLK 2
 #define DT 3
 #define SW 4
@@ -48,12 +56,41 @@ void encISR()
 }
 
 
+// =============== Настройки для помп  =============== //
+
+//uint32_t pump_timers[PUPM_AMOUNT]; // Запоминает время после ВЫКЛЮЧЕНИЯ помпы, для отсчета включения
+uint32_t pumping_time[PUPM_AMOUNT]; // Кол-во времени, отведенное на полив (секунды)
+//uint32_t period_time[PUPM_AMOUNT]; // Кол-во времени простоя между поливами
+boolean pump_state[PUPM_AMOUNT]; // Состояние помпы (включена\выключена)
+byte pump_pins[PUPM_AMOUNT]; // Массив пинов, к которым помпы подключены
+
+int8_t current_set;
+int8_t current_pump;
+boolean now_pumping;
+
+int8_t thisH, thisM, thisS;
+long thisPeriod;
+boolean startFlag = true; // после включения ардуино через эту переменную мы запоминаем время инициализации для последующего включения помп
+ 
+
+// =============== Настройки для помп  =============== //
+
+
 /* =============== ИНИЦИАЛИЗИРУЕМ НАСТРОЙКИ =============== */ 
 
 void setup() {
   //enc1.setType(TYPE2);
   //attachInterrupt(0, encISR, CHANGE);
   //attachInterrupt(1, encISR, CHANGE);
+
+  // --------------------- КОНФИГУРИРУЕМ ПИНЫ ---------------------//
+  for (byte i = 0; i < PUPM_AMOUNT; i++) {            // пробегаем по всем помпам
+    pump_pins[i] = START_PIN + i;                     // настраиваем массив пинов
+    pumping_time[i] = 10;                             // время работы помпы, с
+    pinMode(START_PIN + i, OUTPUT);                   // настраиваем пины
+    digitalWrite(START_PIN + i, !SWITCH_LEVEL);       // выключаем от греха
+  }
+  // --------------------- КОНФИГУРИРУЕМ ПИНЫ ---------------------//
   
   lcd.init();
   lcd.backlight();
@@ -136,6 +173,7 @@ void setup() {
 
 void loop() {
   CheckEncoder();
+  FlowTick();
 }
 
 void CheckEncoder()
@@ -199,17 +237,55 @@ void CheckEncoder()
         SearchUniqueElem(true, (startt+num));
         DefaultDataMenu();
         Print(num, startt);
-      } else if(enc1.leftH() && menu[startt+num].parent != 0)
-      {
-        SearchUniqueElem(false, (startt+num));
-        DefaultDataMenu();
-        Print(num, startt);
+      } else if(enc1.leftH())
+      {      
+        if(menu[startt+num].parent != 0)
+        {
+          SearchUniqueElem(false, (startt+num));
+          DefaultDataMenu();
+          Print(num, startt);
+        }
+        else
+        {
+          inMenu = false;
+          DefaultDataMenu();
+        }
       }
       break;
     case false:
       ShowDataDisplay();
       break;
   }
+}
+
+void FlowTick() // проверка для выключения помпы
+{
+  for (byte i = 0; i < PUPM_AMOUNT; i++) {            // пробегаем по всем помпам
+    if (pumping_time[i] > 0
+        && millis() - pump_timers[i] >= pumping_time[i] * 1000
+        && (pump_state[i] == SWITCH_LEVEL) ) {
+      pump_state[i] = !SWITCH_LEVEL;
+      digitalWrite(pump_pins[i], !SWITCH_LEVEL);
+      pump_timers[i] = millis();
+    }
+  }
+}
+
+void PeriodTick() {
+  for (byte i = 0; i < PUPM_AMOUNT; i++) {            // пробегаем по всем помпам
+    if (startFlag ||
+        (period_time[i] > 0
+         && !!! Здесь проверка значения с датчика влажности!!!
+         && (pump_state[i] != SWITCH_LEVEL))) 
+    {
+      pump_state[i] = SWITCH_LEVEL;
+      digitalWrite(pump_pins[i], SWITCH_LEVEL);
+      pump_timers[i] = millis();
+      now_pumping = true;
+      //Serial.println("Pump #" + String(i) + " ON");
+    }
+  }
+  startFlag = false;
 }
 
 void ShowDataDisplay()
