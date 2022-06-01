@@ -26,8 +26,8 @@
 EncButton<EB_TICK, 2, 3, 4> enc1;
 
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Инициализация дисплея 16*2
-#define ROWS 4
-#define COLS 3
+//#define ROWS 4
+//#define COLS 3
 
 struct ListMenu
 {
@@ -58,11 +58,12 @@ void encISR()
 
 // =============== Настройки для помп  =============== //
 
-//uint32_t pump_timers[PUPM_AMOUNT]; // Запоминает время после ВЫКЛЮЧЕНИЯ помпы, для отсчета включения
+uint32_t pump_timers[PUPM_AMOUNT]; // Запоминает время после ВЫКЛЮЧЕНИЯ помпы, для отсчета включения
 uint32_t pumping_time[PUPM_AMOUNT]; // Кол-во времени, отведенное на полив (секунды)
 //uint32_t period_time[PUPM_AMOUNT]; // Кол-во времени простоя между поливами
 boolean pump_state[PUPM_AMOUNT]; // Состояние помпы (включена\выключена)
 byte pump_pins[PUPM_AMOUNT]; // Массив пинов, к которым помпы подключены
+uint32_t pump_sensor_on[PUPM_AMOUNT]; // Массив для значений с датчика влажности, при пороге которого будет включаться датчик 
 
 int8_t current_set;
 int8_t current_pump;
@@ -71,7 +72,8 @@ boolean now_pumping;
 int8_t thisH, thisM, thisS;
 long thisPeriod;
 boolean startFlag = true; // после включения ардуино через эту переменную мы запоминаем время инициализации для последующего включения помп
- 
+
+int sensorPin = A0; // пин для датчика влажности
 
 // =============== Настройки для помп  =============== //
 
@@ -79,14 +81,17 @@ boolean startFlag = true; // после включения ардуино чер
 /* =============== ИНИЦИАЛИЗИРУЕМ НАСТРОЙКИ =============== */ 
 
 void setup() {
+  Serial.begin(9600);
   //enc1.setType(TYPE2);
   //attachInterrupt(0, encISR, CHANGE);
   //attachInterrupt(1, encISR, CHANGE);
-
+  pinMode(START_PIN + 2, OUTPUT); 
+  digitalWrite(START_PIN + 2, !SWITCH_LEVEL);
   // --------------------- КОНФИГУРИРУЕМ ПИНЫ ---------------------//
   for (byte i = 0; i < PUPM_AMOUNT; i++) {            // пробегаем по всем помпам
     pump_pins[i] = START_PIN + i;                     // настраиваем массив пинов
-    pumping_time[i] = 10;                             // время работы помпы, с
+    pumping_time[i] = 5;                             // время работы помпы, секунд
+    pump_sensor_on[i] = 1000;
     pinMode(START_PIN + i, OUTPUT);                   // настраиваем пины
     digitalWrite(START_PIN + i, !SWITCH_LEVEL);       // выключаем от греха
   }
@@ -114,7 +119,7 @@ void setup() {
   menu[3].parent = 0;
   menu[3].count = 2;
   menu[3].unique = 3;
-  strcpy(menu[3].name, "Programm");
+  strcpy(menu[3].name, "Pump");
 
   menu[4].parent = 0;
   menu[4].count = 3;
@@ -139,12 +144,12 @@ void setup() {
   menu[8].parent = 3;
   menu[8].count = 0;
   menu[8].unique = 8;
-  strcpy(menu[8].name, "Pr1");
+  strcpy(menu[8].name, "Pump 1");
 
   menu[9].parent = 3;
   menu[9].count = 0;
   menu[9].unique = 9;
-  strcpy(menu[9].name, "Pr2");
+  strcpy(menu[9].name, "Pump 2");
 
   menu[10].parent = 4;
   menu[10].count = 0;
@@ -174,6 +179,7 @@ void setup() {
 void loop() {
   CheckEncoder();
   FlowTick();
+  PeriodTick();
 }
 
 void CheckEncoder()
@@ -266,23 +272,29 @@ void FlowTick() // проверка для выключения помпы
         && (pump_state[i] == SWITCH_LEVEL) ) {
       pump_state[i] = !SWITCH_LEVEL;
       digitalWrite(pump_pins[i], !SWITCH_LEVEL);
-      pump_timers[i] = millis();
+      digitalWrite(START_PIN + 2, !SWITCH_LEVEL);
+      //pump_timers[i] = millis();
+      Serial.println("Pump #" + String(i) + " OFF");
     }
   }
 }
 
-void PeriodTick() {
+void PeriodTick() { // включаем помпы
+  int sensorValue;
+  sensorValue = analogRead(sensorPin);
+  Serial.println(pump_sensor_on[START_PIN] < sensorValue);
+  Serial.println(pump_sensor_on[START_PIN+1] < sensorValue);
   for (byte i = 0; i < PUPM_AMOUNT; i++) {            // пробегаем по всем помпам
     if (startFlag ||
-        (period_time[i] > 0
-         && !!! Здесь проверка значения с датчика влажности!!!
+        ((pump_sensor_on[i] < sensorValue)
          && (pump_state[i] != SWITCH_LEVEL))) 
     {
       pump_state[i] = SWITCH_LEVEL;
-      digitalWrite(pump_pins[i], SWITCH_LEVEL);
+      digitalWrite(pump_pins[i], SWITCH_LEVEL); // включаем помпу
+      digitalWrite(START_PIN + 2, SWITCH_LEVEL);
       pump_timers[i] = millis();
-      now_pumping = true;
-      //Serial.println("Pump #" + String(i) + " ON");
+      //now_pumping = true;
+      Serial.println("Pump #" + String(i) + " ON");
     }
   }
   startFlag = false;
@@ -290,11 +302,13 @@ void PeriodTick() {
 
 void ShowDataDisplay()
 {
+  int sensorValue;
+  sensorValue = analogRead(sensorPin);
   lcd.clear();
   lcd.setCursor(0, 0);          // Установить курсор на первыю строку
   lcd.print("Tmp:");    // Вывести текст
   lcd.setCursor(5, 0);
-  lcd.print("15");
+  lcd.print(sensorValue);
   lcd.setCursor(8, 0);
 }
 
