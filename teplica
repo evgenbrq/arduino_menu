@@ -13,9 +13,10 @@
 #define PUPM_AMOUNT 2       // количество помп, подключенных через реле
 #define START_PIN 5         // подключены начиная с пина
 #define SWITCH_LEVEL 0      // реле: 1 - высокого уровня (или мосфет), 0 - низкого
-//#define PARALLEL 0          // 1 - параллельный полив, 0 - полив в порядке очереди
 #define TIMER_START 1       // 1 - отсчёт периода с момента ВЫКЛЮЧЕНИЯ помпы, 0 - с момента ВКЛЮЧЕНИЯ помпы
 #define PIN_NASOS 7         // Пин с подключенным насосом
+#define MAX_PERCENT 90      // Максимальный процент влажности почвы для срабатывания полива
+#define MIN_PERCENT 10      // Минимальный процент влажности почвы для срабатывания полива
 
 //Пины энкодера
 #define CLK 2
@@ -46,6 +47,7 @@ uint8_t unique_elem_menu = 1; //уникальный номер меню, кот
 uint8_t num_str; //сохраняем уникальный номер для каждого подменю, который выбран
 uint8_t startt; //уникальный номер элемента с которого начинается уровень меню
 uint8_t num = 0; //номер выбранного элемента
+bool edit_value = false; // Режим редактирования настроек
 
 // =============== Работа с меню  =============== //
 
@@ -167,8 +169,8 @@ void setup() {
   strcpy(menu[12].name, "Dt3");
 
   lcd.clear();
-  lcd.setCursor(3, 0);          // Установить курсор на первыю строку
-  lcd.print("Project SS");    // Вывести текст
+  lcd.setCursor(0, 0);          // Установить курсор на первыю строку
+  lcd.print("Project Targetss");    // Вывести текст
   lcd.setCursor(4, 1);          // Установить курсор на вторую строку
   lcd.print("Teplica");
   delay(2000);
@@ -185,17 +187,44 @@ void loop() {
 void CheckEncoder()
 {
   enc1.tick();
-  if(!inMenu && (enc1.left() || enc1.right())){
+  if(!inMenu && (enc1.left() || enc1.right()) && edit_value == false){
     inMenu = true;
     num_str = unique_elem_menu;
     startt = num_str;
     lcd.clear();
     Print(num, startt);
   }
+
+  if(((startt+num) == 8 || (startt+num) == 9) && enc1.click())
+  {
+    edit_value = true;
+    inMenu = false;
+
+    EditSettingPumping(startt+num);    
+  }
+  else if(((startt+num) == 8 || (startt+num) == 9) && enc1.leftH())
+  {
+    inMenu = true;
+    edit_value = false;
+  }
+
+  if(edit_value && inMenu == false)
+  {
+    if(enc1.left())
+    {
+      
+    }
+
+    if(enc1.right())
+    {
+      
+    }
+  }
+  
   switch(inMenu)
   {
     case true:
-
+      
       if(enc1.right())
       {
         if (num >= 1) {
@@ -259,9 +288,23 @@ void CheckEncoder()
       }
       break;
     case false:
-      ShowDataDisplay();
+      //ShowDataDisplay();
       break;
   }
+}
+
+// Работа с настройками помпы
+void EditSettingPumping(int num_element)
+{
+      lcd.setCursor(0, 0);
+      lcd.print(menu[num_element].name);
+
+      lcd.setCursor(0, 1);
+      lcd.print("Edit:<");
+      lcd.setCursor(6, 1);
+      lcd.print(500);
+      lcd.setCursor(9, 1);
+      lcd.print(">");
 }
 
 void FlowTick() // проверка для выключения помпы
@@ -282,8 +325,6 @@ void FlowTick() // проверка для выключения помпы
 void PeriodTick() { // включаем помпы
   int sensorValue;
   sensorValue = analogRead(sensorPin);
-  Serial.println(pump_sensor_on[START_PIN] < sensorValue);
-  Serial.println(pump_sensor_on[START_PIN+1] < sensorValue);
   for (byte i = 0; i < PUPM_AMOUNT; i++) {            // пробегаем по всем помпам
     if (startFlag ||
         ((pump_sensor_on[i] < sensorValue)
@@ -322,7 +363,8 @@ void SearchUniqueElem(bool df, int el)
         break;
       }
     }
-  }else
+  }
+  else
   {
     for (int i = 0; i < 13; i++) {
       if (menu[i].parent == menu[menu[el].parent].parent) {
