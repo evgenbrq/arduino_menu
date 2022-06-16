@@ -13,10 +13,9 @@
 #define PUPM_AMOUNT 2       // количество помп, подключенных через реле
 #define START_PIN 5         // подключены начиная с пина
 #define SWITCH_LEVEL 0      // реле: 1 - высокого уровня (или мосфет), 0 - низкого
+//#define PARALLEL 0          // 1 - параллельный полив, 0 - полив в порядке очереди
 #define TIMER_START 1       // 1 - отсчёт периода с момента ВЫКЛЮЧЕНИЯ помпы, 0 - с момента ВКЛЮЧЕНИЯ помпы
 #define PIN_NASOS 7         // Пин с подключенным насосом
-#define MAX_PERCENT 90      // Максимальный процент влажности почвы для срабатывания полива
-#define MIN_PERCENT 10      // Минимальный процент влажности почвы для срабатывания полива
 
 //Пины энкодера
 #define CLK 2
@@ -195,29 +194,58 @@ void CheckEncoder()
     Print(num, startt);
   }
 
-  if(((startt+num) == 8 || (startt+num) == 9) && enc1.click())
+  if(((startt+num) == 8 || (startt+num) == 9))
   {
-    edit_value = true;
-    inMenu = false;
-
-    EditSettingPumping(startt+num);    
-  }
-  else if(((startt+num) == 8 || (startt+num) == 9) && enc1.leftH())
-  {
-    inMenu = true;
-    edit_value = false;
-  }
-
-  if(edit_value && inMenu == false)
-  {
-    if(enc1.left())
+    if(enc1.click())
     {
-      
+      edit_value = true;
+      inMenu = false;
+
+      EditSettingPumping(startt+num); 
     }
-
-    if(enc1.right())
+    else if(enc1.left())
     {
-      
+      if(startt+num == 8)
+      {
+        if(pump_sensor_on[0] >0)
+        {
+          --pump_sensor_on[0];
+          EditSettingPumping(startt+num);
+        }
+      }
+      else if(startt+num == 9)
+      {
+        if(pump_sensor_on[1] > 0)
+        {
+          --pump_sensor_on[0];
+          EditSettingPumping(startt+num);
+        }
+      }
+    }
+    else if(enc1.right())
+    {
+      if(startt+num == 8)
+      {
+        if(pump_sensor_on[0] < 1100)
+        {
+          ++pump_sensor_on[0];
+          EditSettingPumping(startt+num);
+        }
+      }
+      else if(startt+num == 9)
+      {
+        if(pump_sensor_on[1] < 1100)
+        {
+          ++pump_sensor_on[0];
+          EditSettingPumping(startt+num);
+        }
+      }
+    }
+    else if(enc1.leftH())
+    {
+      inMenu = true;
+      edit_value = false;     
+      Print(num, startt);
     }
   }
   
@@ -301,9 +329,16 @@ void EditSettingPumping(int num_element)
 
       lcd.setCursor(0, 1);
       lcd.print("Edit:<");
-      lcd.setCursor(6, 1);
-      lcd.print(500);
-      lcd.setCursor(9, 1);
+      lcd.setCursor(8, 1);
+      if(num_element == 8)
+      {
+        lcd.print(pump_sensor_on[0]);
+      }
+      else if(num_element == 9)
+      {
+        lcd.print(pump_sensor_on[1]);
+      }
+      lcd.setCursor(13, 1);
       lcd.print(">");
 }
 
