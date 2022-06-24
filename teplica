@@ -10,7 +10,7 @@
 /* =============== ИНИЦИАЛИЗИРУЕМ НАСТРОЙКИ =============== */ 
 
 
-#define PUPM_AMOUNT 2       // количество помп, подключенных через реле
+#define PUMP_AMOUNT 2       // количество помп, подключенных через реле
 #define START_PIN 5         // подключены начиная с пина
 #define SWITCH_LEVEL 0      // реле: 1 - высокого уровня (или мосфет), 0 - низкого
 //#define PARALLEL 0          // 1 - параллельный полив, 0 - полив в порядке очереди
@@ -61,13 +61,13 @@ void encISR()
 
 // =============== Настройки для помп  =============== //
 
-uint32_t pump_timers[PUPM_AMOUNT]; // Запоминает время после ВЫКЛЮЧЕНИЯ помпы, для отсчета включения
-uint32_t pumping_time[PUPM_AMOUNT]; // Кол-во времени, отведенное на полив (секунды)
-//uint32_t period_time[PUPM_AMOUNT]; // Кол-во времени простоя между поливами
-boolean pump_state[PUPM_AMOUNT]; // Состояние помпы (включена\выключена)
-byte pump_pins[PUPM_AMOUNT]; // Массив пинов, к которым помпы подключены
-uint32_t pump_sensor_on[PUPM_AMOUNT]; // Массив для значений с датчика влажности, при пороге которого будет включаться датчик
-uint32_t pump_timer_sleep[PUPM_AMOUNT]; // Массив для запоминания секунд во время выключения помпы, чтобы помпа не включалась, если значение с датчика до сих пор не изменилось
+uint32_t pump_timers[PUMP_AMOUNT]; // Запоминает время после ВЫКЛЮЧЕНИЯ помпы, для отсчета включения
+uint32_t pumping_time[PUMP_AMOUNT]; // Кол-во времени, отведенное на полив (секунды)
+//uint32_t period_time[PUMP_AMOUNT]; // Кол-во времени простоя между поливами
+boolean pump_state[PUMP_AMOUNT]; // Состояние помпы (включена\выключена)
+byte pump_pins[PUMP_AMOUNT]; // Массив пинов, к которым помпы подключены
+uint32_t pump_sensor_on[PUMP_AMOUNT]; // Массив для значений с датчика влажности, при пороге которого будет включаться датчик
+uint32_t pump_timer_sleep[PUMP_AMOUNT]; // Массив для запоминания секунд во время выключения помпы, чтобы помпа не включалась, если значение с датчика до сих пор не изменилось
 
 int8_t current_set;
 int8_t current_pump;
@@ -93,7 +93,7 @@ void setup() {
   pinMode(START_PIN + 2, OUTPUT); 
   digitalWrite(START_PIN + 2, !SWITCH_LEVEL);
   // --------------------- КОНФИГУРИРУЕМ ПИНЫ ---------------------//
-  for (byte i = 0; i < PUPM_AMOUNT; i++) {            // пробегаем по всем помпам
+  for (byte i = 0; i < PUMP_AMOUNT; i++) {            // пробегаем по всем помпам
     pump_pins[i] = START_PIN + i;                     // настраиваем массив пинов
     pumping_time[i] = 5;                             // время работы помпы, секунд
     pump_sensor_on[i] = 1000;                        // порог включения помпы
@@ -372,7 +372,7 @@ void EditSettingPumping(int num_element)
 
 void FlowTick() // проверка для выключения помпы
 {
-  for (byte i = 0; i < PUPM_AMOUNT; i++) {            // пробегаем по всем помпам
+  for (byte i = 0; i < PUMP_AMOUNT; i++) {            // пробегаем по всем помпам
     if (pumping_time[i] > 0
         && millis() - pump_timers[i] >= pumping_time[i] * 1000
         && (pump_state[i] == SWITCH_LEVEL) ) {
@@ -389,7 +389,7 @@ void FlowTick() // проверка для выключения помпы
 void PeriodTick() { // включаем помпы
   int sensorValue;
   sensorValue = analogRead(sensorPin);
-  for (byte i = 0; i < PUPM_AMOUNT; i++) {            // пробегаем по всем помпам
+  for (byte i = 0; i < PUMP_AMOUNT; i++) {            // пробегаем по всем помпам
     if (startFlag ||
         ((pump_sensor_on[i] < sensorValue)
          && (pump_state[i] != SWITCH_LEVEL) && millis() - pump_timer_sleep[i] >= 60000)) 
