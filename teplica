@@ -64,7 +64,8 @@ uint32_t pumping_time[PUPM_AMOUNT]; // Кол-во времени, отведе�
 //uint32_t period_time[PUPM_AMOUNT]; // Кол-во времени простоя между поливами
 boolean pump_state[PUPM_AMOUNT]; // Состояние помпы (включена\выключена)
 byte pump_pins[PUPM_AMOUNT]; // Массив пинов, к которым помпы подключены
-uint32_t pump_sensor_on[PUPM_AMOUNT]; // Массив для значений с датчика влажности, при пороге которого будет включаться датчик 
+uint32_t pump_sensor_on[PUPM_AMOUNT]; // Массив для значений с датчика влажности, при пороге которого будет включаться датчик
+uint32_t pump_timer_sleep[PUPM_AMOUNT]; // Массив для запоминания секунд во время выключения помпы, чтобы помпа не включалась, если значение с датчика до сих пор не изменилось
 
 int8_t current_set;
 int8_t current_pump;
@@ -78,6 +79,7 @@ int sensorPin = A0; // пин для датчика влажности
 
 // =============== Настройки для помп  =============== //
 
+void WorkEditPump();
 
 /* =============== ИНИЦИАЛИЗИРУЕМ НАСТРОЙКИ =============== */ 
 
@@ -92,7 +94,7 @@ void setup() {
   for (byte i = 0; i < PUPM_AMOUNT; i++) {            // пробегаем по всем помпам
     pump_pins[i] = START_PIN + i;                     // настраиваем массив пинов
     pumping_time[i] = 5;                             // время работы помпы, секунд
-    pump_sensor_on[i] = 1000;
+    pump_sensor_on[i] = 1000;                        // порог включения помпы
     pinMode(START_PIN + i, OUTPUT);                   // настраиваем пины
     digitalWrite(START_PIN + i, !SWITCH_LEVEL);       // выключаем от греха
   }
@@ -186,67 +188,18 @@ void loop() {
 void CheckEncoder()
 {
   enc1.tick();
+
+  if(inMenu == false && edit_value == true)
+  {
+    WorkEditPump();
+  }
+  
   if(!inMenu && (enc1.left() || enc1.right()) && edit_value == false){
     inMenu = true;
     num_str = unique_elem_menu;
     startt = num_str;
     lcd.clear();
     Print(num, startt);
-  }
-
-  if(((startt+num) == 8 || (startt+num) == 9))
-  {
-    if(enc1.click())
-    {
-      edit_value = true;
-      inMenu = false;
-
-      EditSettingPumping(startt+num); 
-    }
-    else if(enc1.left())
-    {
-      if(startt+num == 8)
-      {
-        if(pump_sensor_on[0] >0)
-        {
-          --pump_sensor_on[0];
-          EditSettingPumping(startt+num);
-        }
-      }
-      else if(startt+num == 9)
-      {
-        if(pump_sensor_on[1] > 0)
-        {
-          --pump_sensor_on[0];
-          EditSettingPumping(startt+num);
-        }
-      }
-    }
-    else if(enc1.right())
-    {
-      if(startt+num == 8)
-      {
-        if(pump_sensor_on[0] < 1100)
-        {
-          ++pump_sensor_on[0];
-          EditSettingPumping(startt+num);
-        }
-      }
-      else if(startt+num == 9)
-      {
-        if(pump_sensor_on[1] < 1100)
-        {
-          ++pump_sensor_on[0];
-          EditSettingPumping(startt+num);
-        }
-      }
-    }
-    else if(enc1.leftH())
-    {
-      inMenu = true;
-      edit_value = false;     
-      Print(num, startt);
-    }
   }
   
   switch(inMenu)
@@ -297,6 +250,13 @@ void CheckEncoder()
         Print(num, startt);
       } else if(enc1.click())
       {
+        if(((startt+num) == 8 || (startt+num) == 9))
+        {
+          inMenu = false;
+          edit_value = true;
+          EditSettingPumping(startt+num);
+          break;
+        }
         SearchUniqueElem(true, (startt+num));
         DefaultDataMenu();
         Print(num, startt);
@@ -321,6 +281,55 @@ void CheckEncoder()
   }
 }
 
+void WorkEditPump()
+{
+    if(enc1.left())
+    {
+      //lcd.clear();
+      if(startt+num == 8)
+      {
+        if(pump_sensor_on[0] < 1005)
+        {
+          pump_sensor_on[0] +=5;
+          EditSettingPumping(startt+num);
+        }
+      }
+      else if(startt+num == 9)
+      {
+        if(pump_sensor_on[1] < 1005)
+        {
+          pump_sensor_on[1] +=5;
+          EditSettingPumping(startt+num);
+        }
+      }
+    }
+    else if(enc1.right())
+    {
+      if(startt+num == 8)
+      {
+        if(pump_sensor_on[0] > 205)
+        {
+          pump_sensor_on[0] -=5;
+          EditSettingPumping(startt+num);
+        }
+      }
+      else if(startt+num == 9)
+      {
+        if(pump_sensor_on[1] > 205)
+        {
+          pump_sensor_on[1] -=5;
+          EditSettingPumping(startt+num);
+        }
+      }
+    }
+    else if(edit_value == true & enc1.leftH())
+    {
+      inMenu = true;
+      edit_value = false;     
+      Print(num, startt);
+    }
+}
+
 // Работа с настройками помпы
 void EditSettingPumping(int num_element)
 {
@@ -329,6 +338,11 @@ void EditSettingPumping(int num_element)
 
       lcd.setCursor(0, 1);
       lcd.print("Edit:<");
+      if(pump_sensor_on[0] < 1000 || pump_sensor_on[1] < 1000)
+      {
+        lcd.setCursor(11,1);
+        lcd.print(" ");
+      }
       lcd.setCursor(8, 1);
       if(num_element == 8)
       {
@@ -349,8 +363,9 @@ void FlowTick() // проверка для выключения помпы
         && millis() - pump_timers[i] >= pumping_time[i] * 1000
         && (pump_state[i] == SWITCH_LEVEL) ) {
       pump_state[i] = !SWITCH_LEVEL;
-      digitalWrite(pump_pins[i], !SWITCH_LEVEL);
+      digitalWrite(pump_pins[i], !SWITCH_LEVEL); //выключаем помпу
       digitalWrite(START_PIN + 2, !SWITCH_LEVEL);
+      pump_timer_sleep[i] = millis();
       //pump_timers[i] = millis();
       Serial.println("Pump #" + String(i) + " OFF");
     }
@@ -363,7 +378,7 @@ void PeriodTick() { // включаем помпы
   for (byte i = 0; i < PUPM_AMOUNT; i++) {            // пробегаем по всем помпам
     if (startFlag ||
         ((pump_sensor_on[i] < sensorValue)
-         && (pump_state[i] != SWITCH_LEVEL))) 
+         && (pump_state[i] != SWITCH_LEVEL) && millis() - pump_timer_sleep[i] >= 60000)) 
     {
       pump_state[i] = SWITCH_LEVEL;
       digitalWrite(pump_pins[i], SWITCH_LEVEL); // включаем помпу
