@@ -48,6 +48,8 @@ uint8_t startt; //уникальный номер элемента с котор
 uint8_t num = 0; //номер выбранного элемента
 bool edit_value = false; // Режим редактирования настроек
 
+uint32_t time_update_display;
+
 // =============== Работа с меню  =============== //
 
 void encISR()
@@ -122,7 +124,7 @@ void setup() {
   menu[3].parent = 0;
   menu[3].count = 2;
   menu[3].unique = 3;
-  strcpy(menu[3].name, "Pump");
+  strcpy(menu[3].name, "Setting pump");
 
   menu[4].parent = 0;
   menu[4].count = 3;
@@ -147,12 +149,12 @@ void setup() {
   menu[8].parent = 3;
   menu[8].count = 0;
   menu[8].unique = 8;
-  strcpy(menu[8].name, "Pump 1");
+  strcpy(menu[8].name, "Pump #1");
 
   menu[9].parent = 3;
   menu[9].count = 0;
   menu[9].unique = 9;
-  strcpy(menu[9].name, "Pump 2");
+  strcpy(menu[9].name, "Pump #2");
 
   menu[10].parent = 4;
   menu[10].count = 0;
@@ -177,6 +179,7 @@ void setup() {
   delay(2000);
 
   ShowDataDisplay();
+  time_update_display = millis();
 }
 
 void loop() {
@@ -200,6 +203,15 @@ void CheckEncoder()
     startt = num_str;
     lcd.clear();
     Print(num, startt);
+  }
+
+  if(inMenu == false && edit_value == false)
+  {
+    if(millis() - time_update_display > 3000)
+    {
+      ShowDataDisplay();
+    }
+
   }
   
   switch(inMenu)
@@ -272,6 +284,7 @@ void CheckEncoder()
         {
           inMenu = false;
           DefaultDataMenu();
+          ShowDataDisplay();
         }
       }
       break;
@@ -333,16 +346,17 @@ void WorkEditPump()
 // Работа с настройками помпы
 void EditSettingPumping(int num_element)
 {
+      lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print(menu[num_element].name);
 
       lcd.setCursor(0, 1);
       lcd.print("Edit:<");
-      if(pump_sensor_on[0] < 1000 || pump_sensor_on[1] < 1000)
+      /*if(pump_sensor_on[0] < 1000 || pump_sensor_on[1] < 1000)
       {
         lcd.setCursor(11,1);
         lcd.print(" ");
-      }
+      }*/
       lcd.setCursor(8, 1);
       if(num_element == 8)
       {
@@ -393,14 +407,15 @@ void PeriodTick() { // включаем помпы
 
 void ShowDataDisplay()
 {
+  time_update_display = millis();
   int sensorValue;
   sensorValue = analogRead(sensorPin);
   lcd.clear();
   lcd.setCursor(0, 0);          // Установить курсор на первыю строку
-  lcd.print("Tmp:");    // Вывести текст
-  lcd.setCursor(5, 0);
+  lcd.print("Vlazhnost:");    // Вывести текст
+  lcd.setCursor(11, 0);
   lcd.print(sensorValue);
-  lcd.setCursor(8, 0);
+  //lcd.setCursor(8, 0);
 }
 
 void SearchUniqueElem(bool df, int el)
