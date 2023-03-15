@@ -1,18 +1,17 @@
 /* =============== ИНИЦИАЛИЗИРУЕМ НАСТРОЙКИ =============== */ 
 
-#define PIN_PUMP 5         // Пин с подключенной помпой
 #define SWITCH_LEVEL 0      // реле: 1 - высокого уровня (или мосфет), 0 - низкого
 #define TIMER_START 1       // 1 - отсчёт периода с момента ВЫКЛЮЧЕНИЯ помпы, 0 - с момента ВКЛЮЧЕНИЯ помпы
-#define PIN_NASOS 7         // Пин с подключенным насосом
+#define PIN_NASOS 5         // Пин с подключенным насосом
 
 
 // =============== Настройки для помп  =============== //
 
-uint32_t pump_timers; // Запоминает время после ВЫКЛЮЧЕНИЯ помпы, для отсчета включения
+uint32_t nasos_timers; // Запоминает время после ВЫКЛЮЧЕНИЯ насоса, для отсчета включения
 uint32_t pumping_time; // Кол-во времени, отведенное на полив (секунды)
-boolean pump_state; // Состояние помпы (включена\выключена)
+boolean nasos_state; // Состояние насоса (включен\выключен)
 uint32_t pump_sensor_on; // Значение с датчика влажности, при пороге которого будет включаться датчик
-uint32_t pump_timer_sleep; // Запоминания секунд во время выключения помпы, чтобы помпа не включалась, если значение с датчика до сих пор не изменилось
+uint32_t pump_timer_sleep; // Запоминания секунд во время выключения насоса, чтобы помпа не включалась, если значение с датчика до сих пор не изменилось
 uint32_t count_minute_sleep; // Колличество миллисекунд, которое ждем прежде чем снова включить помпу(нужно чтобы корректно обновить данные с датчика влажности)
 
 boolean startFlag = true; // после включения ардуино через эту переменную мы запоминаем время инициализации для последующего включения помп
@@ -28,9 +27,7 @@ void setup() {
   // --------------------- КОНФИГУРИРУЕМ ПИН ---------------------//
   pumping_time = 8;                            // время работы помпы, секунд
   pump_sensor_on = 700;                       // порог включения помпы
-  pinMode(PIN_PUMP, OUTPUT);                   // Пин помпы на выход
   pinMode(PIN_NASOS, OUTPUT);              // Пин насоса на выход
-  digitalWrite(PIN_PUMP, !SWITCH_LEVEL);       // Выключаем пин помпы
   digitalWrite(PIN_NASOS, !SWITCH_LEVEL);  // Выключаем пин насоса
   // --------------------- КОНФИГУРИРУЕМ ПИНЫ ---------------------//
   count_minute_sleep = 60000;
@@ -44,10 +41,9 @@ void loop() {
 void CheckForTurnOff() // проверка для выключения помпы
 {
   if (pumping_time > 0
-      && millis() - pump_timers >= pumping_time * 1000
-      && (pump_state == SWITCH_LEVEL) ) {
-    pump_state = !SWITCH_LEVEL;
-    digitalWrite(PIN_PUMP, !SWITCH_LEVEL); // Выключаем помпу
+      && millis() - nasos_timers >= pumping_time * 1000
+      && (nasos_state == SWITCH_LEVEL) ) {
+    nasos_state = !SWITCH_LEVEL;
     digitalWrite(PIN_NASOS, !SWITCH_LEVEL); // Выключаем насос
     pump_timer_sleep = millis();
   }
@@ -58,12 +54,11 @@ void CheckForTurnOn() { // включаем помпы
   sensorValue = analogRead(sensorPin);
   if (startFlag ||
       ((pump_sensor_on < sensorValue)
-       && (pump_state != SWITCH_LEVEL) && millis() - pump_timer_sleep >= count_minute_sleep)) 
+       && (nasos_state != SWITCH_LEVEL) && millis() - pump_timer_sleep >= count_minute_sleep)) 
   {
-    pump_state = SWITCH_LEVEL;
-    digitalWrite(PIN_PUMP, SWITCH_LEVEL);   // Включаем помпу
+    nasos_state = SWITCH_LEVEL;
     digitalWrite(PIN_NASOS, SWITCH_LEVEL);  // Включаем насос
-    pump_timers = millis();
+    nasos_timers = millis();
   }
   startFlag = false;
 }
