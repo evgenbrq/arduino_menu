@@ -53,7 +53,7 @@ void CheckForTurnOff() // проверка для выключения насо�
 void CheckForTurnOn() { // включаем насос
   int sensorValue;
   sensorValue = analogRead(sensorPin);
-  Serial.println("Vlajnost: " + String(sensorValue) + " ");
+  Serial.println(sensorValue);
   delay(1000);
   if (startFlag ||
       ((pump_sensor_on < sensorValue) && (sensorValue < 900)
