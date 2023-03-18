@@ -24,6 +24,7 @@ int sensorPin = A0; // пин для датчика влажности
 /* =============== ИНИЦИАЛИЗИРУЕМ НАСТРОЙКИ =============== */ 
 
 void setup() {
+  Serial.begin(9600);
   // --------------------- КОНФИГУРИРУЕМ ПИН ---------------------//
   pumping_time = 8;                            // время работы насоса, секунд
   pump_sensor_on = 700;                       // порог включения насоса
@@ -52,6 +53,8 @@ void CheckForTurnOff() // проверка для выключения насо�
 void CheckForTurnOn() { // включаем насос
   int sensorValue;
   sensorValue = analogRead(sensorPin);
+  Serial.println("Vlajnost: "+sensorValue);
+  delay(1000);
   if (startFlag ||
       ((pump_sensor_on < sensorValue) && (sensorValue < 900)
        && (nasos_state != SWITCH_LEVEL) && millis() - pump_timer_sleep >= count_minute_sleep)) 
