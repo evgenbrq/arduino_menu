@@ -42,7 +42,6 @@ void CheckForTurnOff() // проверка для выключения насо�
   if ((pump_sensor_up < sensorValue) && (pump_sensor_down < sensorValue) && (nasos_state == SWITCH_LEVEL) ) {
     nasos_state = !SWITCH_LEVEL;
     digitalWrite(PIN_NASOS, !SWITCH_LEVEL); // Выключаем насос
-    pump_timer_sleep = millis();
   }
 }
 
