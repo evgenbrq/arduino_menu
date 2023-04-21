@@ -1,0 +1,60 @@
+/* =============== ИНИЦИАЛИЗИРУЕМ НАСТРОЙКИ =============== */ 
+
+#define SWITCH_LEVEL 0      // реле: 1 - высокого уровня (или мосфет), 0 - низкого
+#define TIMER_START 1       // Отсчёт периода с момента ВЫКЛЮЧЕНИЯ помпы
+#define PIN_NASOS 5         // Пин с подключенным насосом
+
+
+// =============== Настройки для насоса  =============== //
+
+boolean nasos_state; // Состояние насоса (включен\выключен)
+uint32_t pump_sensor_up; // Верхний порог значения с датчика влажности, при котором будет выключаться насос
+uint32_t mump_sensor_down;	// Нижний порог значения с датчика влажности, при котором будет выключаться насос
+
+int sensorPin = A0; // пин для датчика влажности
+
+// =============== Настройки для насоса  =============== //
+
+
+/* =============== ИНИЦИАЛИЗИРУЕМ НАСТРОЙКИ =============== */ 
+
+void setup() {
+  Serial.begin(9600);
+  // --------------------- КОНФИГУРИРУЕМ ПИН ---------------------//
+  pump_sensor_up = 800;                       // Верхний порог для выключения насоса
+  pump_sensor_off = 300;                       // Нижний порог для выключения насоса
+  pinMode(PIN_NASOS, OUTPUT);              // Пин насоса на выход
+  digitalWrite(PIN_NASOS, !SWITCH_LEVEL);  // Выключаем пин насоса
+  // --------------------- КОНФИГУРИРУЕМ ПИНЫ ---------------------//
+}
+
+void loop() {
+  CheckForTurnOff();
+  CheckForTurnOn();
+}
+
+void CheckForTurnOff() // проверка для выключения насоса
+{
+  int sensorValue;
+  sensorValue = analogRead(sensorPin);
+  Serial.println(sensorValue);
+  delay(1000);
+  if ((pump_sensor_up < sensorValue) && (pump_sensor_down < sensorValue) && (nasos_state == SWITCH_LEVEL) ) {
+    nasos_state = !SWITCH_LEVEL;
+    digitalWrite(PIN_NASOS, !SWITCH_LEVEL); // Выключаем насос
+    pump_timer_sleep = millis();
+  }
+}
+
+void CheckForTurnOn() { // включаем насос
+  int sensorValue;
+  sensorValue = analogRead(sensorPin);
+  Serial.println(sensorValue);
+  delay(1000);
+  if ((pump_sensor_up > sensorValue) && (pump_sensor_down > sensorValue)
+       && (nasos_state != SWITCH_LEVEL)) 
+  {
+    nasos_state = SWITCH_LEVEL;
+    digitalWrite(PIN_NASOS, SWITCH_LEVEL);  // Включаем насос
+  }
+}
