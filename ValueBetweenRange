@@ -9,7 +9,7 @@
 
 boolean nasos_state; // Состояние насоса (включен\выключен)
 uint32_t pump_sensor_up; // Верхний порог значения с датчика влажности, при котором будет выключаться насос
-uint32_t mump_sensor_down;	// Нижний порог значения с датчика влажности, при котором будет выключаться насос
+uint32_t pump_sensor_down;  // Нижний порог значения с датчика влажности, при котором будет выключаться насос
 
 int sensorPin = A0; // пин для датчика влажности
 
@@ -22,7 +22,7 @@ void setup() {
   Serial.begin(9600);
   // --------------------- КОНФИГУРИРУЕМ ПИН ---------------------//
   pump_sensor_up = 800;                       // Верхний порог для выключения насоса
-  pump_sensor_off = 300;                       // Нижний порог для выключения насоса
+  pump_sensor_down = 300;                       // Нижний порог для выключения насоса
   pinMode(PIN_NASOS, OUTPUT);              // Пин насоса на выход
   digitalWrite(PIN_NASOS, !SWITCH_LEVEL);  // Выключаем пин насоса
   // --------------------- КОНФИГУРИРУЕМ ПИНЫ ---------------------//
@@ -39,7 +39,7 @@ void CheckForTurnOff() // проверка для выключения насо�
   sensorValue = analogRead(sensorPin);
   Serial.println(sensorValue);
   delay(1000);
-  if ((pump_sensor_up < sensorValue) && (pump_sensor_down < sensorValue) && (nasos_state == SWITCH_LEVEL) ) {
+  if (((pump_sensor_down > sensorValue) && (nasos_state == SWITCH_LEVEL)) || ((pump_sensor_up < sensorValue) && (nasos_state == SWITCH_LEVEL))) {
     nasos_state = !SWITCH_LEVEL;
     digitalWrite(PIN_NASOS, !SWITCH_LEVEL); // Выключаем насос
   }
@@ -50,7 +50,7 @@ void CheckForTurnOn() { // включаем насос
   sensorValue = analogRead(sensorPin);
   Serial.println(sensorValue);
   delay(1000);
-  if ((pump_sensor_up > sensorValue) && (pump_sensor_down > sensorValue)
+  if ((pump_sensor_up > sensorValue) && (pump_sensor_down < sensorValue)
        && (nasos_state != SWITCH_LEVEL)) 
   {
     nasos_state = SWITCH_LEVEL;
