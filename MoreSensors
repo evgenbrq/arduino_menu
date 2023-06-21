@@ -1,6 +1,6 @@
 /* =============== ИНИЦИАЛИЗИРУЕМ НАСТРОЙКИ =============== */ 
 
-#define SWITCH_LEVEL 0      // реле: 1 - высокого уровня (или мосфет), 0 - низкого
+#define SWITCH_LEVEL 1      // реле: 1 - высокого уровня (или мосфет), 0 - низкого
 #define TIMER_START 1       // Отсчёт периода с момента ВЫКЛЮЧЕНИЯ помпы
 #define PIN_NASOS 5         // Пин с подключенным насосом
 #define COUNT_NASOS 4    // Кол-во подключенных насосов
@@ -23,11 +23,11 @@ void setup() {
   // --------------------- КОНФИГУРИРУЕМ ПИНЫ ---------------------//
   sensorPin[0] = A0; // Пин для 1 датчика для 1 насоса
   sensorPin[1] = A1; // Пин для 2 датчика для 2 насоса
-  sensorPin[2] = A2; // Пин для 3 датчика для 3 насоса
-  sensorPin[3] = A3; // Пин для 4 датчика для 4 насоса
-  pump_sensor_up[0] = 800;                       // Верхний порог для выключения насоса 1
+  //sensorPin[2] = A2; // Пин для 3 датчика для 3 насоса
+  //sensorPin[3] = A3; // Пин для 4 датчика для 4 насоса
+  pump_sensor_up[0] = 600;                       // Верхний порог для выключения насоса 1
   pump_sensor_down[0] = 300;                       // Нижний порог для выключения насоса 1
-  pump_sensor_up[1] = 800;                       // Верхний порог для выключения насоса 2
+  pump_sensor_up[1] = 600;                       // Верхний порог для выключения насоса 2
   pump_sensor_down[1] = 300;                       // Нижний порог для выключения насоса 2
   pump_sensor_up[2] = 800;                       // Верхний порог для выключения насоса 3 
   pump_sensor_down[2] = 300;                       // Нижний порог для выключения насоса 3
@@ -42,35 +42,20 @@ void setup() {
 }
 
 void loop() {
-  CheckForTurnOff();
-  CheckForTurnOn();
+  CheckState();
 }
 
-void CheckForTurnOff() // проверка для выключения насоса
-{
+void CheckState() {
   for (byte i = 0; i < COUNT_NASOS; i++){
-    int sensorValue;
-    sensorValue = analogRead(sensorPin[i]);
-    Serial.println(sensorValue);
-    //delay(1000);
-    if (((pump_sensor_down[i] > sensorValue) && (nasos_state[i] == SWITCH_LEVEL)) || ((pump_sensor_up[i] < sensorValue) && (nasos_state == SWITCH_LEVEL))) {
-      nasos_state[i] = !SWITCH_LEVEL;
-      digitalWrite(PIN_NASOS + i, !SWITCH_LEVEL); // Выключаем насос
+    int sensorValue = analogRead(sensorPin[i]);
+    Serial.println("Datchik " + String(i+1) + "=" + sensorValue);
+    if (sensorValue >= pump_sensor_up[i]){
+      Serial.println("Nasos " + String(i+1) + " turn on");
+      digitalWrite(PIN_NASOS + i, SWITCH_LEVEL);
+    } else if (sensorValue <= pump_sensor_down[i]){
+      Serial.println("Nasos " + String(i+1) + " turn off");
+      digitalWrite(PIN_NASOS + i, !SWITCH_LEVEL);
     }
   }
-}
-
-void CheckForTurnOn() { // включаем насос
-  for (byte i = 0; i < COUNT_NASOS; i++){
-    int sensorValue;
-    sensorValue = analogRead(sensorPin[i]);
-    Serial.println(sensorValue);
-    delay(1000);
-    if ((pump_sensor_up[i] > sensorValue) && (pump_sensor_down[i] < sensorValue)
-      && (nasos_state[i] != SWITCH_LEVEL)) 
-    {
-      nasos_state[i] = SWITCH_LEVEL;
-      digitalWrite(PIN_NASOS + i, SWITCH_LEVEL);  // Включаем насос
-    }
-  }
+  delay(1000);
 }
